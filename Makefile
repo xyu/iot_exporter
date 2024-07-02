@@ -28,6 +28,7 @@ clean:
 $(venv): requirements.txt
 	# Install dependencies based on requirements.txt
 	( . $(venv)/bin/activate && pip install --requirement '$<' )
+	@touch '$(venv)'
 	############################################################
 	# Environment Created                                      #
 	#                                                          #
@@ -42,4 +43,4 @@ requirements.txt: requirements.in
 	# Add pip-tools so we can install and lock
 	( . $(venv)/bin/activate && pip install 'pip-tools' )
 	# Use pip-tools to generate locked requirements.txt file
-	( . $(venv)/bin/activate && pip-compile --strip-extras --output-file '$@' )
+	( . $(venv)/bin/activate && pip-compile --strip-extras --generate-hashes --output-file '$@' )
