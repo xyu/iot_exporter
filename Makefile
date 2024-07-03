@@ -1,7 +1,7 @@
 python ?= python3
 venv ?= .venv
 
-.PHONY: default clean
+.PHONY: default clean run
 .SUFFIXES:
 .SECONDARY:
 
@@ -15,6 +15,7 @@ venv ?= .venv
 default: $(venv)
 
 clean:
+	find iot_exporter -type d -name __pycache__ -exec rm -r -- {} +
 	rm -rf '$(venv)'
 	touch 'requirements.in'
 

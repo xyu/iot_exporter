@@ -1,1 +1,4 @@
 /.venv/
+/iot_exporter.log
+/iot_exporter.pid
+__pycache__
