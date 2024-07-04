@@ -353,8 +353,8 @@ def collect() -> list:
 		if info_name not in exposition:
 			exposition[info_name] = []
 
-		output.append("# TYPE %s info" % (
-			info_name.replace('_info', '')
+		output.append("# TYPE %s gauge" % (
+			info_name
 		))
 
 		output += exposition[info_name]
