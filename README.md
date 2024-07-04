@@ -2,7 +2,10 @@ IoT Exporter for Prometheus
 ===========================
 
 Exposes metrics from various IoT stuff for Prometheus. Currently supports:
-	- PurpleAir
+
+ - PurpleAir
+
+## Exporter Details
 
 <details>
 <summary>PurpleAir Exporter</summary>
