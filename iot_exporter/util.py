@@ -30,3 +30,10 @@ def get_conf() -> configparser.ConfigParser:
 		])
 		_logger.debug("Loaded the following config files: %s", config_files_read)
 	return _config
+
+def to_label_param(labels: dict) -> str:
+	params = []
+	for label_name, label_value in labels.items():
+		escaped = str(label_value).replace('\\','\\\\').replace('"','\\"')
+		params.append(f'{label_name}="{escaped}"')
+	return ','.join(params)

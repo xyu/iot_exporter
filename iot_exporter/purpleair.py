@@ -266,6 +266,9 @@ def get_fields(query_type: str) -> list:
 	return fields
 
 def query_api(sensor: int, query_type: str) -> dict:
+	global _cache
+	global _cache_count
+
 	if sensor not in _cache:
 		_cache[sensor] = {
 			'metrics': {
@@ -324,13 +327,6 @@ def query_api(sensor: int, query_type: str) -> dict:
 
 	return _cache[sensor][query_type]
 
-def to_label_param(labels: dict) -> str:
-	params = []
-	for label_name, label_value in labels.items():
-		escaped = str(label_value).replace('\\','\\\\').replace('"','\\"')
-		params.append(f'{label_name}="{escaped}"')
-	return ','.join(params)
-
 def collect_sensor(sensor: int, exposition: dict) -> None:
 	data = query_api(sensor, 'metrics')
 
@@ -361,7 +357,7 @@ def collect_sensor(sensor: int, exposition: dict) -> None:
 
 			exposition[metric_name].append("%s{%s} %f %i" % (
 				metric_name,
-				to_label_param(labels),
+				util.to_label_param(labels),
 				value,
 				data['data_time_stamp'] * 1000
 			))
@@ -387,12 +383,14 @@ def collect_sensor(sensor: int, exposition: dict) -> None:
 
 		exposition[info_name].append("%s{%s} %f %i" % (
 			info_name,
-			to_label_param(labels),
+			util.to_label_param(labels),
 			1,
 			data['data_time_stamp'] * 1000
 		))
 
 def collect() -> list:
+	global _cache_count
+
 	exposition={}
 	for sensor in _conf.get('sensor_ids').split(','):
 		collect_sensor(int(sensor), exposition)

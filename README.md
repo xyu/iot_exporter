@@ -4,6 +4,7 @@ IoT Exporter for Prometheus
 Exposes metrics from various IoT stuff for Prometheus. Currently supports:
 
  - PurpleAir
+ - OpenWeather
 
 ## Exporter Details
 
@@ -157,3 +158,56 @@ purpleair_api_requests_total{cache="miss"} 16.000000
 # EOF
 ```
 </details>
+
+<details>
+<summary>OpenWeather Exporter</summary>
+
+### About
+
+The exporter queries the (OpenWeather API)[https://openweathermap.org] and caches the results so that the exporter endpoint may be queried for more frequently without adversely impacting OpenWeather API limits.
+
+### Metrics Sample
+
+```
+# TYPE openweather_temperature_fahrenheit gauge
+# UNIT openweather_temperature_fahrenheit fahrenheit
+# HELP openweather_temperature_fahrenheit Current temperature.
+openweather_temperature_fahrenheit{type="real",name="...",zip="..."} 85.208000 1720127481000
+openweather_temperature_fahrenheit{type="real_min",name="...",zip="..."} 82.526000 1720127481000
+openweather_temperature_fahrenheit{type="real_max",name="...",zip="..."} 88.358000 1720127481000
+openweather_temperature_fahrenheit{type="feel",name="...",zip="..."} 84.362000 1720127481000
+
+# TYPE openweather_humidity_ratio gauge
+# UNIT openweather_humidity_ratio ratio
+# HELP openweather_humidity_ratio Relative humidity.
+openweather_humidity_ratio{name="...",zip="..."} 0.390000 1720127481000
+
+# TYPE openweather_pressure_millibars gauge
+# UNIT openweather_pressure_millibars millibars
+# HELP openweather_pressure_millibars Atmospheric pressure on the sea level.
+openweather_pressure_millibars{name="...",zip="..."} 1019.000000 1720127481000
+
+# TYPE openweather_visual_range_meters gauge
+# UNIT openweather_visual_range_meters meters
+# HELP openweather_visual_range_meters Often referred to as visibility, capped at 10km.
+openweather_visual_range_meters{name="...",zip="..."} 10000.000000 1720127481000
+
+# TYPE openweather_wind_meters_per_second gauge
+# UNIT openweather_wind_meters_per_second meters_per_second
+# HELP openweather_wind_meters_per_second Wind speed.
+openweather_wind_meters_per_second{type="speed",name="...",zip="..."} 3.090000 1720127481000
+
+# TYPE openweather_cloud_ratio gauge
+# UNIT openweather_cloud_ratio ratio
+# HELP openweather_cloud_ratio Cloudiness.
+openweather_cloud_ratio{name="...",zip="..."} 0.000000 1720127481000
+
+# TYPE openweather_api_requests_total counter
+# HELP openweather_api_requests_total Count of API requests made and skipped due to existing cache
+openweather_api_requests_total{cache="hit"} 0.000000
+openweather_api_requests_total{cache="miss"} 1.000000
+
+# EOF
+```
+</details>
+
