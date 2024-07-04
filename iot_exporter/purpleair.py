@@ -1,4 +1,5 @@
 import logging
+import math
 import requests
 import time
 
@@ -7,6 +8,10 @@ from iot_exporter import util
 _logger = logging.getLogger(__name__)
 _conf = util.get_conf()['purpleair']
 _cache = {}
+_cache_count = {
+	'hit': 0,
+	'miss': 0,
+}
 _session = requests.Session()
 _session.headers.update({'X-API-Key': _conf.get('api_key')})
 
@@ -53,11 +58,11 @@ METRICS = {
 			'humidity_b': {'channel': 'B'},
 		},
 		# Raw value is on average is 4% lower than ambient conditions
-		'normalize': lambda field, x : min(1, x / 100 + 0.04),
+		'normalize': lambda field, x : min( 1, x / 100 + 0.04 ),
 	},
 
 	'purpleair_temperature_fahrenheit': {
-		'HELP': 'Relative humidity inside of the sensor housing.',
+		'HELP': 'Temperature inside of the sensor housing.',
 		'TYPE': 'gauge',
 		'UNIT': 'fahrenheit',
 		'fields': {
@@ -118,10 +123,10 @@ METRICS = {
 		'TYPE': 'gauge',
 		'UNIT': 'meters',
 		'fields': {
-			'visual_range_a': {'channel': 'A'},
-			'visual_range_b': {'channel': 'B'},
+			'0.3_um_count_a': {'channel': 'A'},
+			'0.3_um_count_b': {'channel': 'B'},
 		},
-		'normalize': lambda field, x : x * 1000,
+		'normalize': lambda field, x : 3900000 / ( x * 0.0195 + 10 ),
 	},
 
 	'purpleair_light_scattering_deciviews': {
@@ -129,9 +134,10 @@ METRICS = {
 		'TYPE': 'gauge',
 		'UNIT': 'deciviews',
 		'fields': {
-			'deciviews_a': {'channel': 'A'},
-			'deciviews_b': {'channel': 'B'},
+			'0.3_um_count_a': {'channel': 'A'},
+			'0.3_um_count_b': {'channel': 'B'},
 		},
+		'normalize': lambda field, x : 10 * math.log( ( x * 0.0195 + 10 ) / 10 )
 	},
 
 	'purpleair_um_particles_per_100ml': {
@@ -234,9 +240,9 @@ def calc_epa_aqi(field: str, value: float) -> float:
 		i_lo =  breakpoint_aqi[index-1]
 		bp_lo = breakpoint_pollutant[index-1]
 
-	return (i_hi - i_lo) / (bp_hi - bp_lo) * ( value - bp_lo ) + i_lo
+	return ( i_hi - i_lo ) / ( bp_hi - bp_lo ) * ( value - bp_lo ) + i_lo
 
-def get_fields() -> list:
+def get_fields(query_type: str) -> list:
 	"""
 	Gets all fields we need to query the PurpleAir API for based on configured metrics.
 
@@ -247,36 +253,76 @@ def get_fields() -> list:
 	"""
 	fields = []
 
-	# Metric fields
-	for metric_name, metric_def in METRICS.items():
-		fields = list(set(fields + list(metric_def['fields'].keys())))
-
-	# Info metric fields
-	for info_name, info_fields in INFO_FIELDS.items():
-		fields = list(set(fields + info_fields))
+	match query_type:
+		case 'metrics':
+			for metric_name, metric_def in METRICS.items():
+				fields = list(set(fields + list(metric_def['fields'].keys())))
+		case 'info':
+			for info_name, info_fields in INFO_FIELDS.items():
+				fields = list(set(fields + info_fields))
+		case _:
+			raise ValueError(f'{query_type} is not a valid query_type.')
 
 	return fields
 
-def query_api(sensor: int) -> dict:
-	if sensor in _cache:
-		if 'time_stamp' in _cache[sensor] and time.time() - _cache[sensor]['time_stamp'] < int(_conf.get('api_cache_time')):
-			return _cache[sensor]
-		else:
-			_cache[sensor]['time_stamp'] = time.time() # stampede protection
-	else:
-		_cache[sensor] = {}
+def query_api(sensor: int, query_type: str) -> dict:
+	if sensor not in _cache:
+		_cache[sensor] = {
+			'metrics': {
+				'time_stamp': 0,
+			},
+			'info': {
+				'time_stamp': 0,
+			},
+		}
 
+	match query_type:
+		case 'metrics':
+			cache_ttl = int(_conf.get('api_cache_time'))
+		case 'info':
+			cache_ttl = 60 * 60 * 24 * 7
+		case _:
+			raise ValueError(f'{query_type} is not a valid query_type.')
+
+
+	if time.time() - _cache[sensor][query_type]['time_stamp'] < cache_ttl:
+		_cache_count['hit'] += 1
+		return _cache[sensor][query_type]
+	else:
+		_cache[sensor][query_type]['time_stamp'] = time.time() # stampede protection
+
+	# Test if we have new data first for metrics queries
+	if 'metrics' == query_type and 'data_time_stamp' in _cache[sensor]['metrics']:
+		data_time_stamp = 0
+
+		_cache_count['miss'] += 1
+		response = _session.get(
+			f"{_conf.get('api_endpoint')}/{sensor}",
+			params = {
+				'fields': 'confidence',
+			}
+		)
+
+		if response.status_code == 200:
+			response_data = response.json()
+			data_time_stamp = int(response_data['data_time_stamp'])
+
+		if data_time_stamp <= _cache[sensor]['metrics']['data_time_stamp']:
+			_cache_count['hit'] += 1
+			return _cache[sensor]['metrics']
+
+	_cache_count['miss'] += 1
 	response = _session.get(
 		f"{_conf.get('api_endpoint')}/{sensor}",
 		params = {
-			'fields': ','.join(get_fields()),
+			'fields': ','.join(get_fields(query_type)),
 		}
 	)
 
 	if response.status_code == 200:
-		_cache[sensor] = response.json()
+		_cache[sensor][query_type] = response.json()
 	
-	return _cache[sensor]
+	return _cache[sensor][query_type]
 
 def to_label_param(labels: dict) -> str:
 	params = []
@@ -286,7 +332,7 @@ def to_label_param(labels: dict) -> str:
 	return ','.join(params)
 
 def collect_sensor(sensor: int, exposition: dict) -> None:
-	data = query_api(sensor)
+	data = query_api(sensor, 'metrics')
 
 	if 'time_stamp' not in data or 'sensor' not in data:
 		return
@@ -319,6 +365,11 @@ def collect_sensor(sensor: int, exposition: dict) -> None:
 				value,
 				data['data_time_stamp'] * 1000
 			))
+
+	data = query_api(sensor, 'info')
+
+	if 'time_stamp' not in data or 'sensor' not in data:
+		return
 
 	# Info fields
 	for info_name, info_fields in INFO_FIELDS.items():
@@ -374,5 +425,21 @@ def collect() -> list:
 				))
 		output += exposition[metric_name]
 		output.append('')
+
+	# Meta stats fields
+	meta = 'purpleair_api_requests_total'
+	output.append("# TYPE %s counter" % (meta))
+	output.append("# HELP %s Count of API requests made and skipped due to existing cache" % (meta))
+	output.append('%s{cache="%s"} %f' % (
+		meta,
+		'hit',
+		_cache_count['hit']
+	))
+	output.append('%s{cache="%s"} %f' % (
+		meta,
+		'miss',
+		_cache_count['miss']
+	))
+	output.append('')
 
 	return output
