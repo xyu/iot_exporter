@@ -321,7 +321,7 @@ def query_api(sensor: int, query_type: str) -> dict:
 
 	if response.status_code == 200:
 		_cache[sensor][query_type] = response.json()
-	
+
 	return _cache[sensor][query_type]
 
 def to_label_param(labels: dict) -> str:
