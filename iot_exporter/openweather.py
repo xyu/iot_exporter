@@ -147,7 +147,6 @@ def collect() -> list:
 	global _cache_count
 
 	data = query_api()
-	print(data)
 	lat_lon = get_lat_lon()
 
 	output = []
