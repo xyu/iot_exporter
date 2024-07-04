@@ -164,7 +164,7 @@ purpleair_api_requests_total{cache="miss"} 16.000000
 
 ### About
 
-The exporter queries the (OpenWeather API)[https://openweathermap.org] and caches the results so that the exporter endpoint may be queried for more frequently without adversely impacting OpenWeather API limits.
+The exporter queries the [OpenWeather API](https://openweathermap.org) and caches the results so that the exporter endpoint may be queried for more frequently without adversely impacting OpenWeather API limits.
 
 ### Metrics Sample
 
