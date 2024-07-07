@@ -92,6 +92,18 @@ def query_api() -> dict:
 		_cache['timestamp'] = time.time() # stampede protection
 
 	_cache_count['miss'] += 1
+
+	response = _session.get(
+		_conf.get('api_endpoint'),
+		params = {
+			'api_key': _conf.get('api_key'),
+			'resource': 'sensor',
+			'method': 'sync',
+		}
+	)
+	if response.status_code != 200:
+		_logger.debug("Could not sync sensor data")
+
 	response = _session.get(
 		_conf.get('api_endpoint'),
 		params = {
