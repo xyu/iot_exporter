@@ -23,7 +23,7 @@ logging.info( 'Logging now setup.' )
 # App requirements
 #
 
-from iot_exporter import openweather, purpleair, util
+from iot_exporter import beestat, openweather, purpleair, util
 
 _conf = util.get_conf()['DEFAULT']
 
@@ -42,6 +42,7 @@ class ExporterHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
 				output = []
 				output += purpleair.collect()
 				output += openweather.collect()
+				output += beestat.collect()
 				output.append("# EOF\n")
 
 				self.wfile.write(bytes(

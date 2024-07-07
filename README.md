@@ -5,6 +5,7 @@ Exposes metrics from various IoT stuff for Prometheus. Currently supports:
 
  - PurpleAir
  - OpenWeather
+ - Beestat.io (ecobee)
 
 ## Exporter Details
 
@@ -211,3 +212,32 @@ openweather_api_requests_total{cache="miss"} 1.000000
 ```
 </details>
 
+<details>
+<summary>Beestat.io Exporter</summary>
+
+### About
+
+The exporter exports data for ecobee thermostats via [Beestat.io](https://beestat.io) and caches the results so that the exporter endpoint may be queried for more frequently without adversely impacting API limits. We go through Beestat.io because ecobee APIs are currently closed to new developers.
+
+### Metrics Sample
+
+```
+# TYPE ecobee_temperature_fahrenheit gauge
+# UNIT ecobee_temperature_fahrenheit fahrenheit
+# HELP ecobee_temperature_fahrenheit Temperature reported by ecobee sensor.
+ecobee_temperature_fahrenheit{thermostat_id="...",sensor_id="...",name="Main Floor"} 72.300000 1720377354034
+ecobee_temperature_fahrenheit{thermostat_id="...",sensor_id="...",name="Upstairs"} 75.200000 1720377354034
+
+# TYPE ecobee_humidity_ratio gauge
+# UNIT ecobee_humidity_ratio ratio
+# HELP ecobee_humidity_ratio Relative humidity reported by ecobee sensor.
+ecobee_humidity_ratio{thermostat_id="...",sensor_id="...",name="Main Floor"} 0.570000 1720377354034
+
+# TYPE ecobee_api_requests_total counter
+# HELP ecobee_api_requests_total Count of API requests made and skipped due to existing cache
+ecobee_api_requests_total{cache="hit"} 0.000000
+ecobee_api_requests_total{cache="miss"} 1.000000
+
+# EOF
+```
+</details>
